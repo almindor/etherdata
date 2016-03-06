@@ -17,6 +17,22 @@ app.logger = require( './lib/logger' );
 
 app.logger.initialize( app, 4 );
 
+function getLastBlock( req, client, done ) {
+  var sql = 'SELECT number FROM blocks b ORDER BY b.number DESC LIMIT 1';
+  app.logger.logQuery( 'lastblock', { sql: sql, values: [] } );
+  client.query(sql, [], function(err, result) {
+    if( err ) {
+      return done( err );
+    }
+
+    if ( result && result.rows && result.rows.length ) {
+      return done( null, result.rows[0].number );
+    }
+
+    return done( null, -1 ); // TODO: bigint!
+  });
+}
+
 function getTransactions( req, client, done ) {
   if ( !req || !req.body || !req.body.accounts || !req.body.accounts.length ) {
     return done( 'Invalid request' );
@@ -49,6 +65,21 @@ pg.connect(conString, function(err, client, done) {
   if(err) {
     return console.error( err );
   }
+
+  app.post('/api/lastblock', function (req, res) {
+    var diff = new Date() - lastRequest;
+//    if ( diff < 500 ) { // 2x per second
+//        return res.status(403).send( { success: false, error: 'Too many request, try again later' } );
+//    }
+    lastRequest = new Date();
+    getLastBlock( req, client, function ( err, result ) {
+      if ( err ) {
+        app.logger.logError( err );
+        return res.status(400).send( { success: false, error: err } );
+      }
+      res.send({ success: true, result: result });
+    } );
+  });
 
   app.post('/api/transactions', function (req, res) {
     var diff = new Date() - lastRequest;
