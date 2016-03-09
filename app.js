@@ -114,9 +114,13 @@ pg.connect(conString, function(err, client, done) {
         } );
 
         r.on( 'end', function() {
-          currencies = JSON.parse( data );
-          currencies.date = new Date().valueOf();
-          res.send( { success: true, currencies: currencies } );
+          try {
+            currencies = JSON.parse( data );
+            currencies.date = new Date().valueOf();
+            res.send( { success: true, currencies: currencies } );
+          } catch ( err ) {
+            res.send( { success: false, error: err } );
+          }
         } );
       } );
     } else {
