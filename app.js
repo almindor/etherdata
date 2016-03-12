@@ -102,7 +102,7 @@ pg.connect(conString, function(err, client, done) {
       var data = '';
       console.log( 'Requesting prices' );
 
-      https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=USD,CAD,EUR,GBP',
+      https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
       function( r ) {
         r.on( 'error', function( err ) {
           console.error( err );
