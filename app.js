@@ -92,7 +92,7 @@ pg.connect(conString, function(err, client, done) {
         app.logger.logError( err );
         return res.status(400).send( { success: false, error: err } );
       }
-      res.send({ success: true, result: result, version: '1.1.4' });
+      res.send({ success: true, result: result, version: '1.1.5' });
     } );
   });
 
