@@ -10,6 +10,7 @@ var app = express();
 var jsonParser = bodyParser.json();
 var lastRequest = new Date();
 var currencies;
+var varsion = '1.1.5';
 
 app.use( jsonParser );
 
@@ -92,9 +93,13 @@ pg.connect(conString, function(err, client, done) {
         app.logger.logError( err );
         return res.status(400).send( { success: false, error: err } );
       }
-      res.send({ success: true, result: result, version: '1.1.5' });
+      res.send({ success: true, result: result, version: version });
     } );
   });
+
+  app.post('/api/version', function (req, res) {
+    res.send({ success: true, result: version });
+  } );
 
   app.post('/api/currencies', function( req, res ) {
     var now = new Date().valueOf();
