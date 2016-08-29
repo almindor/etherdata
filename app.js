@@ -67,6 +67,10 @@ pg.connect(conString, function(err, client, done) {
     return console.error( err );
   }
 
+  app.get('/api/health', function (req, res) {
+    res.send({ success: true });
+  });
+
   app.post('/api/lastblock', function (req, res) {
     var diff = new Date() - lastRequest;
 //    if ( diff < 500 ) { // 2x per second
