@@ -43,10 +43,10 @@ function getTransactions( req, client, done ) {
   var params = [];
   for ( var i = 0; i < req.body.accounts.length; i++ ) {
     params.push( '$' + (i + 1) );
-    values.push( req.body.accounts[i] );
+    values.push( req.body.accounts[i].toLowerCase() );
   }
 
-  var paramStr = params.join(',').toLowerCase();
+  var paramStr = params.join(',');
   var sql = 'SELECT hash, blocknumber FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
