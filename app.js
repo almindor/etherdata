@@ -10,7 +10,7 @@ var app = express();
 var jsonParser = bodyParser.json();
 var lastRequest = new Date();
 var currencies;
-var version = '1.3.1';
+var version = '1.3.2';
 
 app.use( jsonParser );
 
