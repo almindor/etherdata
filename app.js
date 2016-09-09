@@ -5,6 +5,7 @@ var conString = "postgres://etherreader:password@localhost/etherdb";
 var express = require( 'express' );
 var bodyParser = require( 'body-parser' );
 var _ = require ( 'underscore' );
+var config = require( './config' );
 
 var app = express();
 var jsonParser = bodyParser.json();
@@ -105,12 +106,41 @@ pg.connect(conString, function(err, client, done) {
     res.send({ success: true, result: version });
   } );
 
+  app.post('/api/contracts', function( req, res ) {
+    if ( !req || !req.body || !req.body.address ) {
+      return res.send( { success: false, error: 'Invalid request' } );
+    }
+
+    console.log( 'Requesting contract ABI' );
+    var data = '';
+    https.get('https://api.etherscan.io/api?module=contract&action=getabi&address=' + req.body.address + '&apikey=' + config.etherscan_key,
+    function( r ) {
+      r.on( 'error', function( err ) {
+        console.error( err );
+        return res.send( { success: false, error: err } );
+      } );
+
+      r.on( 'data', function( d ) {
+        data += String(d);
+      } );
+
+      r.on( 'end', function() {
+        try {
+          var json = JSON.parse( data );
+          res.send( { success: true, abi: JSON.parse(json.result) } );
+        } catch ( err ) {
+          res.send( { success: false, error: err } );
+        }
+      } );
+    } );
+  } );
+
   app.post('/api/currencies', function( req, res ) {
     var now = new Date().valueOf();
     if ( !currencies || ( now - currencies.date ) > 1000 * 300 ) { // older than 5m
-      var data = '';
       console.log( 'Requesting prices' );
 
+      var data = '';
       https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
       function( r ) {
         r.on( 'error', function( err ) {
