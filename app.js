@@ -11,7 +11,7 @@ var app = express();
 var jsonParser = bodyParser.json();
 var lastRequest = new Date();
 var currencies;
-var version = '1.4.0';
+var version = '1.4.1';
 
 app.use( jsonParser );
 
