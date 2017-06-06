@@ -117,7 +117,7 @@ pg.connect(conString, function(err, client, done) {
       apiVersion = 'ropsten';
     }
 
-    console.log( 'Requesting contract ABI' );
+    console.log( `Requesting contract ABI on prefix ${apiVersion}` );
     var data = '';
     https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${req.body.address}&apikey=${config.etherscan_key}`,
     function( r ) {
