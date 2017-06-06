@@ -111,9 +111,15 @@ pg.connect(conString, function(err, client, done) {
       return res.send( { success: false, error: 'Invalid request' } );
     }
 
+    let apiVersion = 'api'; // main
+
+    if ( req.body.testnet ) {
+      apiVersion = 'ropsten';
+    }
+
     console.log( 'Requesting contract ABI' );
     var data = '';
-    https.get('https://api.etherscan.io/api?module=contract&action=getabi&address=' + req.body.address + '&apikey=' + config.etherscan_key,
+    https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${req.body.address}&apikey=${config.etherscan_key}`,
     function( r ) {
       r.on( 'error', function( err ) {
         console.error( err );
