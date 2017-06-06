@@ -111,7 +111,7 @@ pg.connect(conString, function(err, client, done) {
       return res.send( { success: false, error: 'Invalid request' } );
     }
 
-    let apiVersion = 'api'; // main
+    var apiVersion = 'api'; // main
 
     if ( req.body.testnet ) {
       apiVersion = 'ropsten';
