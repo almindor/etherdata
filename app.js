@@ -11,7 +11,7 @@ var app = express();
 var jsonParser = bodyParser.json();
 var lastRequest = new Date();
 var currencies;
-var version = '2.0.1';
+var version = config.etherwall_version;
 
 app.use( jsonParser );
 
