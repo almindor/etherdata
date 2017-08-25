@@ -1,3 +1,6 @@
 // config vars
-var etherscan_key = 'apikey';
-var etherwall_version = '2.0.2';
+
+module.exports = {
+  etherscan_key: 'apikey',
+  etherwall_version: '2.0.2'
+}
