@@ -1,7 +1,6 @@
 var async = require( 'async' );
 var https = require( 'https' );
 var pg = require( 'pg' );
-var conString = "postgres://etherreader:password@localhost/etherdb";
 var express = require( 'express' );
 var bodyParser = require( 'body-parser' );
 var _ = require ( 'underscore' );
@@ -12,11 +11,11 @@ var jsonParser = bodyParser.json();
 var lastRequest = new Date();
 var currencies;
 var version = config.etherwall_version;
+var conString = config.pg_uri;
 
 app.use( jsonParser );
 
 app.logger = require( './lib/logger' );
-
 app.logger.initialize( app, 4 );
 
 function getLastBlock( req, client, done ) {
@@ -65,8 +64,11 @@ function getTransactions( req, client, done ) {
 
 pg.connect(conString, function(err, client, done) {
   if(err) {
-    return console.error( err );
+    return console.error( err.message );
   }
+
+  app.nodes = require( './lib/nodes' );
+  app.nodes.initialize( app, config.nodes );
 
   app.get('/api/health', function (req, res) {
     res.send({ success: true });
@@ -104,6 +106,15 @@ pg.connect(conString, function(err, client, done) {
 
   app.post('/api/version', function (req, res) {
     res.send({ success: true, result: version });
+  } );
+
+  app.post('/api/init', function (req, res) {
+    res.send({
+      success: true,
+      result: version,
+      endpoint: app.nodes.next(),
+      nodes: app.nodes.count()
+    });
   } );
 
   app.post('/api/contracts', function( req, res ) {
