@@ -111,7 +111,7 @@ pg.connect(conString, function(err, client, done) {
   app.post('/api/init', function (req, res) {
     res.send({
       success: true,
-      result: version,
+      warning: config.warning,
       endpoint: app.nodes.next(),
       nodes: app.nodes.count()
     });
