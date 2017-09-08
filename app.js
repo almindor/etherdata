@@ -47,7 +47,7 @@ function getTransactions( req, client, done ) {
   }
 
   var paramStr = params.join(',');
-  var sql = 'SELECT hash, blocknumber FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
+  var sql = 'SELECT hash, blocknumber, blockhash, from, to, value, gas, gasPrice FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
     if( err ) {
