@@ -47,7 +47,7 @@ function getTransactions( req, client, done ) {
   }
 
   var paramStr = params.join(',');
-  var sql = 'SELECT hash, decode(blockNumber, \'hex\'), blockHash, t.from, t.to, decode(t.value, \'hex\'), decode(gas, \'hex\'), decode(gasPrice, \'hex\') FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
+  var sql = 'SELECT hash, to_hex(blockNumber), blockHash, t.from, t.to, to_hex(t.value), to_hex(gas), to_hex(gasPrice) FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
     if( err ) {
