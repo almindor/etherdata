@@ -47,7 +47,7 @@ function getTransactions( req, client, done ) {
   }
 
   var paramStr = params.join(',');
-  var sql = 'SELECT hash, blocknumber, blockhash, "from", "to", "value", gas, gasPrice FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
+  var sql = 'SELECT hash, decode(blockNumber, \'hex\'), blockHash, t.from, t.to, decode(t.value, \'hex\'), decode(gas, \'hex\'), decode(gasPrice, \'hex\') FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
     if( err ) {
@@ -55,7 +55,16 @@ function getTransactions( req, client, done ) {
     }
 
     if ( result && result.rows && result.rows.length ) {
-      return done( null, result.rows );
+      return done( null, _.map(result.rows, function(row) {
+        row.blockNumber = row.blocknumber;
+        delete row.blocknumber;
+        row.blockHash = row.blockhash;
+        delete row.blockhash;
+        row.gasPrice = row.gasprice;
+        delete row.gasprice;
+
+        return row;
+      }) );
     }
 
     return done( null, [] );
