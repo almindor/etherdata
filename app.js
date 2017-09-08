@@ -112,6 +112,7 @@ pg.connect(conString, function(err, client, done) {
     res.send({
       success: true,
       warning: config.warning,
+      version: version,
       endpoint: app.nodes.next(),
       nodes: app.nodes.count()
     });
