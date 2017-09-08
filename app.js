@@ -4,6 +4,7 @@ var pg = require( 'pg' );
 var express = require( 'express' );
 var bodyParser = require( 'body-parser' );
 var _ = require ( 'underscore' );
+var Decimal = require('decimal.js');
 var config = require( './config' );
 
 var app = express();
@@ -47,7 +48,7 @@ function getTransactions( req, client, done ) {
   }
 
   var paramStr = params.join(',');
-  var sql = 'SELECT hash, to_hex(blockNumber), blockHash, t.from, t.to, to_hex(t.value), to_hex(gas), to_hex(gasPrice) FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
+  var sql = 'SELECT hash, blockNumber, blockHash, t.from, t.to, t.value, gas, gasPrice FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
     if( err ) {
@@ -56,12 +57,14 @@ function getTransactions( req, client, done ) {
 
     if ( result && result.rows && result.rows.length ) {
       return done( null, _.map(result.rows, function(row) {
-        row.blockNumber = row.blocknumber;
+        row.blockNumber = new Decimal(row.blocknumber).toHexadecimal();
         delete row.blocknumber;
         row.blockHash = row.blockhash;
         delete row.blockhash;
-        row.gasPrice = row.gasprice;
+        row.gasPrice = new Decimal(row.gasprice).toHexadecimal();
         delete row.gasprice;
+        row.value = new Decimal(row.value).toHexadecimal();
+        row.gas = new Decimal(row.gas).toHexadecimal();
 
         return row;
       }) );
