@@ -5,6 +5,7 @@ var express = require( 'express' );
 var bodyParser = require( 'body-parser' );
 var _ = require ( 'underscore' );
 var Decimal = require('decimal.js');
+var LRU = require("lru-cache");
 var config = require( './config' );
 
 var app = express();
@@ -13,6 +14,7 @@ var lastRequest = new Date();
 var currencies;
 var version = config.etherwall_version;
 var conString = config.pg_uri;
+var cache = LRU(500);
 
 app.use( jsonParser );
 
@@ -141,9 +143,20 @@ pg.connect(conString, function(err, client, done) {
       apiVersion = 'ropsten';
     }
 
-    console.log( `Requesting contract ABI on prefix ${apiVersion}` );
     var data = '';
-    https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${req.body.address}&apikey=${config.etherscan_key}`,
+    var address_lower = req.body.address.toLowerCase();
+    if ( address_lower.length != 42 ) {
+      return res.send( { success: false, error: 'invalid address' } );
+    }
+
+    if ( apiVersion === 'api' && cache.has(address_lower) ) { // cache main only
+      console.log( `Found contract ABI on prefix ${apiVersion} in cache` );
+      res.send( { success: true, abi: cache.get(address_lower) } );
+      return;
+    }
+
+    console.log( `Requesting contract ABI on prefix ${apiVersion}` );
+    https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${address_lower}&apikey=${config.etherscan_key}`,
     function( r ) {
       r.on( 'error', function( err ) {
         console.error( err );
@@ -157,7 +170,11 @@ pg.connect(conString, function(err, client, done) {
       r.on( 'end', function() {
         try {
           var json = JSON.parse( data );
-          res.send( { success: true, abi: JSON.parse(json.result) } );
+          var abi = JSON.parse(json.result);
+          if ( apiVersion === 'api' ) {  // cache main only
+            cache.set(address_lower, abi);
+          }
+          res.send( { success: true, abi: abi } );
         } catch ( err ) {
           res.send( { success: false, error: err } );
         }
