@@ -123,12 +123,17 @@ pg.connect(conString, function(err, client, done) {
   } );
 
   app.post('/api/init', function (req, res) {
+    var nodeCount = app.nodes.count();
+    var warning = config.warning;
+    if ( nodeCount === 0 ) {
+      warning = warning || 'No valid websocket ethereum nodes found';
+    }
     res.send({
       success: true,
-      warning: config.warning,
+      warning: warning,
       version: version,
       endpoint: app.nodes.next(),
-      nodes: app.nodes.count()
+      nodes: nodeCount
     });
   } );
 
