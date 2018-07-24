@@ -50,7 +50,7 @@ function getTransactions( req, client, done ) {
   var params = [];
 
   for ( var i = 0; i < req.body.accounts.length; i++ ) {
-    let acc = req.body.accounts[i].toLowerCase();
+    var acc = req.body.accounts[i].toLowerCase();
     if ( acc.startsWith('0x') ) {
       acc = acc.substring(2);
     }
