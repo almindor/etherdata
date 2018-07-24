@@ -22,7 +22,7 @@ app.logger = require( './lib/logger' );
 app.logger.initialize( app, 4 );
 
 function getLastBlock( req, client, done ) {
-  var sql = 'SELECT number FROM blocks b ORDER BY b.number DESC LIMIT 1';
+  var sql = 'SELECT number FROM view_blocks b ORDER BY b.number DESC LIMIT 1';
   app.logger.logQuery( 'lastblock', { sql: sql, values: [] } );
   client.query(sql, [], function(err, result) {
     if( err ) {
@@ -42,15 +42,24 @@ function getTransactions( req, client, done ) {
     return done( 'Invalid request' );
   }
 
+  if ( req.body.accounts.length > 100 ) {
+    return done( 'Too many accounts in request, maximum is 100' );
+  }
+
   var values = [];
   var params = [];
+
   for ( var i = 0; i < req.body.accounts.length; i++ ) {
-    params.push( '$' + (i + 1) );
-    values.push( req.body.accounts[i].toLowerCase() );
+    let acc = req.body.accounts[i].toLowerCase();
+    if ( acc.startsWith('0x') ) {
+      acc = acc.substring(2);
+    }
+    params.push( `DECODE($${(i + 1)}, 'hex')` );
+    values.push( acc );
   }
 
   var paramStr = params.join(',');
-  var sql = 'SELECT hash, blockNumber, blockHash, t.from, t.to, t.value, gas, gasPrice FROM transactions t WHERE t.from IN (' + paramStr + ') OR t.to IN (' + paramStr + ')';
+  var sql = 'SELECT hash, blockNumber, blockHash, t.from, t.to, t.value, gas, gasPrice FROM view_transactions t WHERE t.from_raw IN (' + paramStr + ') OR t.to_raw IN (' + paramStr + ')';
   app.logger.logQuery( 'transactions', { sql: sql, values: values } );
   client.query(sql, values, function(err, result) {
     if( err ) {
