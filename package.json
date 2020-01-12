@@ -5,7 +5,7 @@
     "async": "1.4.x",
     "body-parser": "1.13.x",
     "decimal.js": "7.2.3",
-    "express": "4.13.x",
+    "express": "4.17.x",
     "lru-cache": "4.1.x",
     "pg": "6.1.x",
     "underscore": "1.8.x",
