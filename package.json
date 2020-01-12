@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "dependencies": {
     "async": "1.4.x",
-    "body-parser": "1.13.x",
+    "body-parser": "1.19.x",
     "decimal.js": "7.2.3",
     "express": "4.17.x",
     "lru-cache": "4.1.x",
