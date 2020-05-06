@@ -15,7 +15,8 @@ var currencies;
 var version = config.etherwall_version;
 var conString = config.pg_uri;
 var cache = LRU(500);
-const pg = new Client({
+
+const client = new Client({
   connectionString: conString
 })
 
@@ -88,7 +89,7 @@ function getTransactions( req, client, done ) {
   });
 }
 
-pg.connect();
+client.connect();
 
 app.nodes = require( './lib/nodes' );
 app.nodes.initialize( app, config.nodes );
