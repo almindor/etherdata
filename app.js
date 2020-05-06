@@ -1,12 +1,12 @@
-var async = require( 'async' );
-var https = require( 'https' );
-var pg = require( 'pg' );
-var express = require( 'express' );
-var bodyParser = require( 'body-parser' );
-var _ = require ( 'underscore' );
-var Decimal = require('decimal.js');
-var LRU = require("lru-cache");
-var config = require( './config' );
+const async = require( 'async' );
+const https = require( 'https' );
+const { Client } = require('pg')
+const express = require( 'express' );
+const bodyParser = require( 'body-parser' );
+const _ = require ( 'underscore' );
+const Decimal = require('decimal.js');
+const LRU = require("lru-cache");
+const config = require( './config' );
 
 var app = express();
 var jsonParser = bodyParser.json();
@@ -15,6 +15,9 @@ var currencies;
 var version = config.etherwall_version;
 var conString = config.pg_uri;
 var cache = LRU(500);
+const pg = new Client({
+  connectionString: conString
+})
 
 app.use( jsonParser );
 
@@ -85,92 +88,121 @@ function getTransactions( req, client, done ) {
   });
 }
 
-pg.connect(conString, function(err, client, done) {
-  if(err) {
-    return console.error( err.message );
+pg.connect();
+
+app.nodes = require( './lib/nodes' );
+app.nodes.initialize( app, config.nodes );
+
+app.get('/api/health', function (req, res) {
+  res.send({ success: true });
+});
+
+app.post('/api/lastblock', function (req, res) {
+  var diff = new Date() - lastRequest;
+//    if ( diff < 500 ) { // 2x per second
+//        return res.status(403).send( { success: false, error: 'Too many request, try again later' } );
+//    }
+  lastRequest = new Date();
+  getLastBlock( req, client, function ( err, result ) {
+    if ( err ) {
+      app.logger.logError( err );
+      return res.status(400).send( { success: false, error: err } );
+    }
+    res.send({ success: true, result: result });
+  } );
+});
+
+app.post('/api/transactions', function (req, res) {
+  var diff = new Date() - lastRequest;
+//    if ( diff < 500 ) { // 2x per second
+//        return res.status(403).send( { success: false, error: 'Too many request, try again later' } );
+//    }
+  lastRequest = new Date();
+  getTransactions( req, client, function ( err, result ) {
+    if ( err ) {
+      app.logger.logError( err );
+      return res.status(400).send( { success: false, error: err } );
+    }
+    res.send({ success: true, result: result, version: version });
+  } );
+});
+
+app.post('/api/version', function (req, res) {
+  res.send({ success: true, result: version });
+} );
+
+app.post('/api/init', function (req, res) {
+  var nodeCount = app.nodes.count();
+  var warning = config.warning;
+  if ( nodeCount === 0 ) {
+    warning = warning || 'No valid websocket ethereum nodes found';
+  }
+  res.send({
+    success: true,
+    warning: warning,
+    version: version,
+    endpoint: app.nodes.next(),
+    nodes: nodeCount
+  });
+} );
+
+app.post('/api/contracts', function( req, res ) {
+  if ( !req || !req.body || !req.body.address ) {
+    return res.send( { success: false, error: 'Invalid request' } );
   }
 
-  app.nodes = require( './lib/nodes' );
-  app.nodes.initialize( app, config.nodes );
+  var apiVersion = 'api'; // main
 
-  app.get('/api/health', function (req, res) {
-    res.send({ success: true });
-  });
+  if ( req.body.testnet ) {
+    apiVersion = 'ropsten';
+  }
 
-  app.post('/api/lastblock', function (req, res) {
-    var diff = new Date() - lastRequest;
-//    if ( diff < 500 ) { // 2x per second
-//        return res.status(403).send( { success: false, error: 'Too many request, try again later' } );
-//    }
-    lastRequest = new Date();
-    getLastBlock( req, client, function ( err, result ) {
-      if ( err ) {
-        app.logger.logError( err );
-        return res.status(400).send( { success: false, error: err } );
-      }
-      res.send({ success: true, result: result });
+  var data = '';
+  var address_lower = req.body.address.toLowerCase();
+  if ( address_lower.length != 42 ) {
+    return res.send( { success: false, error: 'invalid address' } );
+  }
+
+  if ( apiVersion === 'api' && cache.has(address_lower) ) { // cache main only
+    console.log( `Found contract ABI on prefix ${apiVersion} in cache` );
+    res.send( { success: true, abi: cache.get(address_lower) } );
+    return;
+  }
+
+  console.log( `Requesting contract ABI on prefix ${apiVersion}` );
+  https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${address_lower}&apikey=${config.etherscan_key}`,
+  function( r ) {
+    r.on( 'error', function( err ) {
+      console.error( err );
+      return res.send( { success: false, error: err } );
     } );
-  });
 
-  app.post('/api/transactions', function (req, res) {
-    var diff = new Date() - lastRequest;
-//    if ( diff < 500 ) { // 2x per second
-//        return res.status(403).send( { success: false, error: 'Too many request, try again later' } );
-//    }
-    lastRequest = new Date();
-    getTransactions( req, client, function ( err, result ) {
-      if ( err ) {
-        app.logger.logError( err );
-        return res.status(400).send( { success: false, error: err } );
-      }
-      res.send({ success: true, result: result, version: version });
+    r.on( 'data', function( d ) {
+      data += String(d);
     } );
-  });
 
-  app.post('/api/version', function (req, res) {
-    res.send({ success: true, result: version });
+    r.on( 'end', function() {
+      try {
+        var json = JSON.parse( data );
+        var abi = JSON.parse(json.result);
+        if ( apiVersion === 'api' ) {  // cache main only
+          cache.set(address_lower, abi);
+        }
+        res.send( { success: true, abi: abi } );
+      } catch ( err ) {
+        res.send( { success: false, error: err } );
+      }
+    } );
   } );
+} );
 
-  app.post('/api/init', function (req, res) {
-    var nodeCount = app.nodes.count();
-    var warning = config.warning;
-    if ( nodeCount === 0 ) {
-      warning = warning || 'No valid websocket ethereum nodes found';
-    }
-    res.send({
-      success: true,
-      warning: warning,
-      version: version,
-      endpoint: app.nodes.next(),
-      nodes: nodeCount
-    });
-  } );
-
-  app.post('/api/contracts', function( req, res ) {
-    if ( !req || !req.body || !req.body.address ) {
-      return res.send( { success: false, error: 'Invalid request' } );
-    }
-
-    var apiVersion = 'api'; // main
-
-    if ( req.body.testnet ) {
-      apiVersion = 'ropsten';
-    }
+app.post('/api/currencies', function( req, res ) {
+  var now = new Date().valueOf();
+  if ( !currencies || ( now - currencies.date ) > 1000 * 300 ) { // older than 5m
+    console.log( 'Requesting prices' );
 
     var data = '';
-    var address_lower = req.body.address.toLowerCase();
-    if ( address_lower.length != 42 ) {
-      return res.send( { success: false, error: 'invalid address' } );
-    }
-
-    if ( apiVersion === 'api' && cache.has(address_lower) ) { // cache main only
-      console.log( `Found contract ABI on prefix ${apiVersion} in cache` );
-      res.send( { success: true, abi: cache.get(address_lower) } );
-      return;
-    }
-
-    console.log( `Requesting contract ABI on prefix ${apiVersion}` );
-    https.get(`https://${apiVersion}.etherscan.io/api?module=contract&action=getabi&address=${address_lower}&apikey=${config.etherscan_key}`,
+    https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
     function( r ) {
       r.on( 'error', function( err ) {
         console.error( err );
@@ -183,55 +215,22 @@ pg.connect(conString, function(err, client, done) {
 
       r.on( 'end', function() {
         try {
-          var json = JSON.parse( data );
-          var abi = JSON.parse(json.result);
-          if ( apiVersion === 'api' ) {  // cache main only
-            cache.set(address_lower, abi);
-          }
-          res.send( { success: true, abi: abi } );
+          currencies = JSON.parse( data );
+          currencies.date = new Date().valueOf();
+          res.send( { success: true, currencies: currencies } );
         } catch ( err ) {
           res.send( { success: false, error: err } );
         }
       } );
     } );
-  } );
+  } else {
+    res.send( { success: true, currencies: currencies } );
+  }
+});
 
-  app.post('/api/currencies', function( req, res ) {
-    var now = new Date().valueOf();
-    if ( !currencies || ( now - currencies.date ) > 1000 * 300 ) { // older than 5m
-      console.log( 'Requesting prices' );
+var server = app.listen(3000, 'localhost', function () {
+  var host = server.address().address;
+  var port = server.address().port;
 
-      var data = '';
-      https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
-      function( r ) {
-        r.on( 'error', function( err ) {
-          console.error( err );
-          return res.send( { success: false, error: err } );
-        } );
-
-        r.on( 'data', function( d ) {
-          data += String(d);
-        } );
-
-        r.on( 'end', function() {
-          try {
-            currencies = JSON.parse( data );
-            currencies.date = new Date().valueOf();
-            res.send( { success: true, currencies: currencies } );
-          } catch ( err ) {
-            res.send( { success: false, error: err } );
-          }
-        } );
-      } );
-    } else {
-      res.send( { success: true, currencies: currencies } );
-    }
-  });
-
-  var server = app.listen(3000, 'localhost', function () {
-    var host = server.address().address;
-    var port = server.address().port;
-
-    app.logger.logInfo('App listening at http://' + host + ':' + port);
-  });
-} );
+  app.logger.logInfo('App listening at http://' + host + ':' + port);
+});

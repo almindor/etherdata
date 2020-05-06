@@ -7,7 +7,7 @@
     "decimal.js": "7.2.3",
     "express": "4.17.x",
     "lru-cache": "4.1.x",
-    "pg": "6.1.x",
+    "pg": "8.0.x",
     "underscore": "1.8.x",
     "ws": "3.3.x"
   }
