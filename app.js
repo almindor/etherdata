@@ -203,7 +203,7 @@ app.post('/api/currencies', function( req, res ) {
     console.log( 'Requesting prices' );
 
     var data = '';
-    https.get('https://www.cryptocompare.com/api/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
+    https.get('https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=BTC,USD,CAD,EUR,GBP',
     function( r ) {
       r.on( 'error', function( err ) {
         console.error( err );
