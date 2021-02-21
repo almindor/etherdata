@@ -5,6 +5,6 @@ module.exports = {
   etherscan_key: 'apikey',
   etherwall_version: '2.0.2',
   nodes: [
-    'wss://node.at'
+    { endpoint: 'wss://node.at', priority: 0, alias: 'node' }
   ]
 }

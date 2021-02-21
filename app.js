@@ -95,7 +95,13 @@ app.nodes = require( './lib/nodes' );
 app.nodes.initialize( app, config.nodes );
 
 app.get('/api/health', function (req, res) {
-  res.send({ success: true });
+  var diff = new Date() - lastRequest;
+  var age = null;
+  if ( diff > 500 ) { // 2x per second max
+      age = app.nodes.age();
+  }
+  lastRequest = new Date();
+  res.send({ success: true, age: age });
 });
 
 app.post('/api/lastblock', function (req, res) {
