@@ -9,6 +9,6 @@
     "lru-cache": "4.1.x",
     "pg": "8.0.x",
     "underscore": "1.8.x",
-    "ws": "3.3.x"
+    "ws": "8.5.x"
   }
 }
