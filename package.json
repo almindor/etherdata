@@ -8,7 +8,7 @@
     "express": "4.17.x",
     "lru-cache": "4.1.x",
     "pg": "8.0.x",
-    "underscore": "1.8.x",
+    "underscore": "1.12.x",
     "ws": "8.5.x"
   }
 }
